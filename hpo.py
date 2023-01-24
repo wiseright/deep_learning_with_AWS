@@ -52,11 +52,8 @@ def test(model, test_loader):
 
     test_loss /= len(test_loader.dataset)
 
-    logger.info(
-                "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-                    test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)
-                )
-    )
+    logger.info("\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)))
+    print("\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)))
 
 def train(model, train_loader, optimizer, epoch):
     '''
@@ -71,14 +68,8 @@ def train(model, train_loader, optimizer, epoch):
         loss.backward()
         optimizer.step()
         if batch_idx % 100 == 0:
-            logger.info("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
-                        epoch,
-                        batch_idx * len(data),
-                        1000, len(train_loader.dataset),
-                        100.0 * batch_idx / len(train_loader),
-                        loss.item(),
-                        )
-            )
+            logger.info("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(epoch, batch_idx * len(data), len(train_loader.dataset), 100.0 * batch_idx / len(train_loader), loss.item(),))
+            print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(epoch, batch_idx * len(data), len(train_loader.dataset), 100.0 * batch_idx / len(train_loader), loss.item(),))
     
 def net():
     '''
@@ -157,7 +148,7 @@ def main(args):
     '''
     TODO: Test the model to see its accuracy
     '''
-    test_loader = create_loader(url = args.data_dir,
+    test_loader = create_loader(url = args.data_dir_test,
                                 batch_size=args.test_batch_size)
     #test_loader = create_loader(url = './dogImages/test',
     #                             batch_size=args.test_batch_size)
@@ -215,10 +206,12 @@ if __name__=='__main__':
     # parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
     parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
     parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+    parser.add_argument("--data-dir-test", type=str, default=os.environ["SM_CHANNEL_TESTING"])
     # parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
     
     args=parser.parse_args()
     
     logger.info(f"____Cartella canale training____: {args.data_dir}")
+    logger.info(f"____Cartella canale testing____: {args.data_dir_test}")
     
     main(args)
