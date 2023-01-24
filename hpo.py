@@ -11,10 +11,18 @@ import torchvision.transforms as T
 import torch.nn.functional as F
 #import webdataset as wds
 from torchvision.datasets import ImageFolder
+#import sys
+#import subprocess
+import os
 import sys
-import subprocess
-
+import logging
 import argparse
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 # Definisce una map su ogni elemento Resize immagine
 def preprocess(sample):
@@ -44,13 +52,13 @@ def test(model, test_loader):
 
     test_loss /= len(test_loader.dataset)
 
-    print(
-        "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-            test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)
-        )
+    logger.info(
+                "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
+                    test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)
+                )
     )
 
-def train(model, train_loader, criterion, optimizer):
+def train(model, train_loader, optimizer, epoch):
     '''
     TODO: Complete this function that can take a model and
           data loaders for training and will get train the model
@@ -63,14 +71,13 @@ def train(model, train_loader, criterion, optimizer):
         loss.backward()
         optimizer.step()
         if batch_idx % 100 == 0:
-            print(
-                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
-                    epoch,
-                    batch_idx * len(data),
-                    len(train_loader.dataset),
-                    100.0 * batch_idx / len(train_loader),
-                    loss.item(),
-                )
+            logger.info("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                        epoch,
+                        batch_idx * len(data),
+                        1000, len(train_loader.dataset),
+                        100.0 * batch_idx / len(train_loader),
+                        loss.item(),
+                        )
             )
     
 def net():
@@ -93,30 +100,34 @@ def create_loader(url, batch_size):
     '''
     # Install webdataset
     # implement pip as a subprocess:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'webdataset'])
-    
-    import webdataset as wds
-    
-    #Create Dataset from tar archive
-    dataset = wds.WebDataset(url).shuffle(1000).decode("rgb").to_tuple("jpg.input.jpg", "jpg.target.cls").map(preprocess)
-    dataset = dataset.batched(16)
-    
-    #Create Loader
-    loader = wds.WebLoader(dataset, num_workers=2, batch_size=None)
-    loader = loader.unbatched().shuffle(1000).batched(batch_size)
-    
-    #transform = transforms.Compose([
-    #    transforms.RandomHorizontalFlip(p=0.5),
-    #    transforms.Resize((224, 224)),
-    #    transforms.ToTensor(),
-    #    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
-    #)
+    #subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'webdataset'])
     #
-    #dataset = ImageFolder(root=url, transform=transform)
-    #loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    #import webdataset as wds
+    #
+    ##Create Dataset from tar archive
+    #dataset = wds.WebDataset(url).shuffle(1000).decode("rgb").to_tuple("jpg.input.jpg", "jpg.target.cls").map(preprocess)
+    #dataset = dataset.batched(16)
+    #
+    ##Create Loader
+    #loader = wds.WebLoader(dataset, num_workers=2, batch_size=None)
+    #loader = loader.unbatched().shuffle(1000).batched(batch_size)
+    logger.info("Get train data loader")
+    
+    transform = transforms.Compose([
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+    )
+    
+    dataset = ImageFolder(root=url, transform=transform)
+    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     #
     return loader
-
+def save_model(model, model_dir):
+    logger.info("Saving the model.")
+    path = os.path.join(model_dir, "model.pth")
+    torch.save(model.cpu().state_dict(), path)
 
 def main(args):
     print(args)
@@ -136,22 +147,22 @@ def main(args):
     TODO: Call the train function to start training your model
     Remember that you will need to set up a way to get training data from S3
     '''      
-    train_loader = create_loader(url = 'https://sagemaker-us-east-1-265345480326.s3.amazonaws.com/project_3/dogImages_dataset.tar',
+    train_loader = create_loader(url = args.data_dir,
                                 batch_size=args.batch_size)
     #train_loader = create_loader(url = './dogImages/train',
     #                             batch_size=args.batch_size)
     
-    model=train(model, train_loader, loss_criterion, optimizer)
+    #model=train(model, train_loader, loss_criterion, optimizer)
     
     '''
     TODO: Test the model to see its accuracy
     '''
-    test_loader = create_loader(url = 'https://sagemaker-us-east-1-265345480326.s3.amazonaws.com/project_3/dogImages_dataset.tar',
+    test_loader = create_loader(url = args.data_dir,
                                 batch_size=args.test_batch_size)
     #test_loader = create_loader(url = './dogImages/test',
     #                             batch_size=args.test_batch_size)
     
-    test(model, test_loader, criterion)
+    #test(model, test_loader, criterion)
     
     # training and testing
     for epoch in range(1, args.epochs + 1):
@@ -161,7 +172,9 @@ def main(args):
     '''
     TODO: Save the trained model
     '''
-    torch.save(model, './model.pt')
+    #logger.info("Saving the model.")
+    #torch.save(model, './model.pt')
+    save_model(model, args.model_dir)
 
    
 if __name__=='__main__':
@@ -200,10 +213,12 @@ if __name__=='__main__':
     # Container environment
     # parser.add_argument("--hosts", type=list, default=json.loads(os.environ["SM_HOSTS"]))
     # parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
-    # parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
-    # parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+    parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
+    parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
     # parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
     
     args=parser.parse_args()
+    
+    logger.info(f"____Cartella canale training____: {args.data_dir}")
     
     main(args)
