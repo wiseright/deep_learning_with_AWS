@@ -8,7 +8,11 @@ import torchvision
 import torchvision.models as models
 import torchvision.transforms as transforms
 import torchvision.transforms as T
-import webdataset as wds
+import torch.nn.functional as F
+#import webdataset as wds
+from torchvision.datasets import ImageFolder
+import sys
+import subprocess
 
 import argparse
 
@@ -87,14 +91,30 @@ def create_loader(url, batch_size):
     This is an optional function that you may or may not need to implement
     depending on whether you need to use data loaders or not
     '''
-    # Create Dataset from tar archive
+    # Install webdataset
+    # implement pip as a subprocess:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'webdataset'])
+    
+    import webdataset as wds
+    
+    #Create Dataset from tar archive
     dataset = wds.WebDataset(url).shuffle(1000).decode("rgb").to_tuple("jpg.input.jpg", "jpg.target.cls").map(preprocess)
     dataset = dataset.batched(16)
     
-    # Create Loader
+    #Create Loader
     loader = wds.WebLoader(dataset, num_workers=2, batch_size=None)
     loader = loader.unbatched().shuffle(1000).batched(batch_size)
     
+    #transform = transforms.Compose([
+    #    transforms.RandomHorizontalFlip(p=0.5),
+    #    transforms.Resize((224, 224)),
+    #    transforms.ToTensor(),
+    #    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+    #)
+    #
+    #dataset = ImageFolder(root=url, transform=transform)
+    #loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    #
     return loader
 
 
@@ -116,16 +136,20 @@ def main(args):
     TODO: Call the train function to start training your model
     Remember that you will need to set up a way to get training data from S3
     '''      
-    train_loader = create_loader(url = 's3://sagemaker-us-east-1-265345480326/project_3/dogImages_dataset.tar',
-                                 batch_size=args.batch_size)
+    train_loader = create_loader(url = 'https://sagemaker-us-east-1-265345480326.s3.amazonaws.com/project_3/dogImages_dataset.tar',
+                                batch_size=args.batch_size)
+    #train_loader = create_loader(url = './dogImages/train',
+    #                             batch_size=args.batch_size)
     
     model=train(model, train_loader, loss_criterion, optimizer)
     
     '''
     TODO: Test the model to see its accuracy
     '''
-    train_loader = create_loader(url = 's3://sagemaker-us-east-1-265345480326/project_3/dogImages_dataset.tar',
-                                 batch_size=args.test_batch_size)
+    test_loader = create_loader(url = 'https://sagemaker-us-east-1-265345480326.s3.amazonaws.com/project_3/dogImages_dataset.tar',
+                                batch_size=args.test_batch_size)
+    #test_loader = create_loader(url = './dogImages/test',
+    #                             batch_size=args.test_batch_size)
     
     test(model, test_loader, criterion)
     
@@ -137,7 +161,7 @@ def main(args):
     '''
     TODO: Save the trained model
     '''
-    torch.save(model, './model')
+    torch.save(model, './model.pt')
 
    
 if __name__=='__main__':
@@ -174,11 +198,11 @@ if __name__=='__main__':
     )
 
     # Container environment
-    parser.add_argument("--hosts", type=list, default=json.loads(os.environ["SM_HOSTS"]))
-    parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
-    parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
-    parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
-    parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
+    # parser.add_argument("--hosts", type=list, default=json.loads(os.environ["SM_HOSTS"]))
+    # parser.add_argument("--current-host", type=str, default=os.environ["SM_CURRENT_HOST"])
+    # parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
+    # parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+    # parser.add_argument("--num-gpus", type=int, default=os.environ["SM_NUM_GPUS"])
     
     args=parser.parse_args()
     
