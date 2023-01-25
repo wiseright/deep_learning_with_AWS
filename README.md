@@ -18,10 +18,10 @@ Upload the data to an S3 bucket through the AWS Gateway so that SageMaker has ac
 What kind of model did you choose for this experiment and why? Give an overview of the types of parameters and their ranges used for the hyperparameter search
 
 Remember that your README should:
-- Include a screenshot of completed training jobs
-- Logs metrics during the training process
-- Tune at least two hyperparameters
-- Retrieve the best best hyperparameters from all your training jobs
+- Include a screenshot of completed training jobs (see attached file 'HPO_TUNING_JOB_pytorch-training-230125-0428.png' and 'TRAINING_JOB_pytorch-training-230125-0428.png' in folder SCREENSHOT)
+- Logs metrics during the training process  (see attached CSV file)
+- Tune at least two hyperparameters (see attached file 'Best_HPO.png' in folder SCREENSHOT)
+- Retrieve the best best hyperparameters from all your training jobs (see attached file 'Best_HPO.png' in folder SCREENSHOT)
 
 ## Debugging and Profiling
 **TODO**: Give an overview of how you performed model debugging and profiling in Sagemaker
