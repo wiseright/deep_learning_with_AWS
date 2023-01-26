@@ -81,7 +81,9 @@ def net():
         param.requires_grad = False   
     num_features=model.fc.in_features
     model.fc = nn.Sequential(
-                   nn.Linear(num_features, 133))
+                   nn.Linear(num_features, 3),
+                   nn.LogSoftmax(dim=1)
+    )
     return model
 
 def create_loader(url, batch_size):
@@ -214,5 +216,9 @@ if __name__=='__main__':
     
     logger.info(f"____Cartella canale training____: {args.data_dir}")
     logger.info(f"____Cartella canale testing____: {args.data_dir_test}")
+    
+    # Logging HPO values
+    logger.info(f"____Learning rate value = ____: {args.lr}")
+    logger.info(f"____Batch size____: {args.batch_size}")
     
     main(args)

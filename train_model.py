@@ -92,7 +92,9 @@ def net():
         param.requires_grad = False   
     num_features=model.fc.in_features
     model.fc = nn.Sequential(
-                   nn.Linear(num_features, 133))
+                   nn.Linear(num_features, 3),
+                   nn.LogSoftmax(dim=1) 
+    )
     return model
 
 def create_loader(url, batch_size):
