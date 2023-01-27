@@ -15,8 +15,13 @@ import os
 import sys
 import logging
 import argparse
+import json
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 # filename: inference.py
 # from: https://hubofco.de/machinelearning/2020/03/22/Deploy-a-pytorch-model-to-Sagemaker/
@@ -24,11 +29,11 @@ def model_fn(model_dir):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logger.info('Loading the model.')
     model = models.resnet50(pretrained=False)
-    fc_inputs = model.fc.in_features
+    num_features = model.fc.in_features
   
     model.fc = nn.Sequential(
-                   nn.Linear(num_features, 3)
-                   nn.LogSoftmax(dim=1)
+                   nn.Linear(num_features, 3),
+                   #nn.LogSoftmax(dim=1) 
     )
     
 

@@ -38,7 +38,7 @@ def preprocess(sample):
     
     return 1-image, label
 
-def test(model, test_loader, hook):
+def test(model, test_loader, hook, criterion):
     '''
     TODO: Complete this function that can take a model and a 
           testing data loader and will get the test accuray/loss of the model
@@ -53,7 +53,8 @@ def test(model, test_loader, hook):
     with torch.no_grad():
         for data, target in test_loader:
             output = model(data)
-            test_loss += F.nll_loss(output, target, reduction="sum").item()  # sum up batch loss
+            #test_loss += F.nll_loss(output, target, reduction="sum").item()  # sum up batch loss
+            test_loss += criterion(output, target).item()  # sum up batch loss
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
@@ -62,7 +63,7 @@ def test(model, test_loader, hook):
     logger.info("\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)))
     print("\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(test_loss, correct, len(test_loader.dataset), 100.0 * correct / len(test_loader.dataset)))
 
-def train(model, train_loader, optimizer, epoch, hook):
+def train(model, train_loader, optimizer, epoch, hook, criterion):
     '''
     TODO: Complete this function that can take a model and
           data loaders for training and will get train the model
@@ -75,10 +76,11 @@ def train(model, train_loader, optimizer, epoch, hook):
     for batch_idx, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
         output = model(data)
-        loss = F.nll_loss(output, target)
+        #loss = F.nll_loss(output, target)
+        loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        if batch_idx % 100 == 0:
+        if batch_idx % 10 == 0:
             logger.info("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(epoch, batch_idx * len(data), len(train_loader.dataset), 100.0 * batch_idx / len(train_loader), loss.item(),))
             print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(epoch, batch_idx * len(data), len(train_loader.dataset), 100.0 * batch_idx / len(train_loader), loss.item(),))
     
@@ -93,7 +95,7 @@ def net():
     num_features=model.fc.in_features
     model.fc = nn.Sequential(
                    nn.Linear(num_features, 3),
-                   nn.LogSoftmax(dim=1) 
+                   #nn.LogSoftmax(dim=1) 
     )
     return model
 
@@ -149,7 +151,9 @@ def main(args):
     hook = smd.Hook.create_from_json_file()
     hook.register_hook(model)
     
+    
     loss_criterion = nn.CrossEntropyLoss()
+    hook.register_loss(loss_criterion)
     optimizer = optim.Adam(model.fc.parameters(), lr=args.lr)
     
     '''
@@ -177,8 +181,8 @@ def main(args):
     for epoch in range(1, args.epochs + 1):
         # 5. Pass debug to train and test function
         
-        train(model, train_loader, optimizer, epoch, hook)
-        test(model, test_loader, hook)
+        train(model, train_loader, optimizer, epoch, hook, loss_criterion)
+        test(model, test_loader, hook, loss_criterion)
     
     '''
     TODO: Save the trained model
