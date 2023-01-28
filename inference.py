@@ -1,3 +1,4 @@
+import requests
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,6 +17,7 @@ import sys
 import logging
 import argparse
 import json
+from PIL import Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -37,13 +39,13 @@ def model_fn(model_dir):
     )
     
 
-    with open(os.path.join(model_dir, 'model_0.pth'), 'rb') as f:
+    with open(os.path.join(model_dir, 'model.pth'), 'rb') as f:
         model.load_state_dict(torch.load(f))
     model.to(device).eval()
     logger.info('Done loading model')
     return model
 
-def input_fn(request_body, request_content_type):
+def input_fn(request_body, content_type='application/json'):
     logger.info('Deserializing the input data.')
     if content_type == 'application/json':
         input_data = json.loads(request_body)
@@ -73,7 +75,7 @@ def predict_fn(input_data, model):
         ps = torch.exp(out)
     return ps
 
-def output_fn(prediction, content_type):
+def output_fn(prediction_output, accept='application/json'):
     logger.info('Serializing the generated output.')
     classes = {0: 'Affenpinscher', 1: 'Afghan_hound', 2: 'Airedale_terrier'}
 
